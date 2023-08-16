@@ -136,6 +136,11 @@ function updateEntity(entity, dt) {
 			entity.cooldowns[key] = 0;
 		}
 	});
+	if (entity != player) soulAI(entity, dt);
+}
+
+function soulAI(soul, dt) {
+	move(soul, -1);
 }
 
 function move(entity, value) {
