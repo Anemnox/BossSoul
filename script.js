@@ -187,6 +187,4 @@ function draw() {
 	updateAllEntities(1);
 
 	handleInput();
-
-	animation(runAnimation, 200, 200);
 }
