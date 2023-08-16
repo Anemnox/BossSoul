@@ -30,7 +30,7 @@ let player = {
 	}
 }
 
-let entities = [player];
+let entityMap = {};
 let entityGroup;
 
 function preload() {
@@ -69,6 +69,7 @@ function playerSetUp() {
 	player.sprite.rotationLock = true;
 	player.sprite.friction = 0;
 
+	entityMap[player.sprite] = player;
 	entityGroup.push(player.sprite);
 }
 
@@ -93,7 +94,7 @@ function spawnSoul() {
 	soul.sprite.friction = 0;
 	soul.sprite.layer = 3;
 
-	entities.push(soul);
+	entityMap[soul.sprite] = soul;
 	entityGroup.add(soul.sprite);
 	return soul;
 }
@@ -121,6 +122,7 @@ function setup() {
 // move
 // jump
 function updateAllEntities(dt) {
+	let entities = Object.values(entityMap);
 	for (let i = 0; i < entities.length; i++) {
 		let e = entities[i];
 		updateEntity(e, dt);
