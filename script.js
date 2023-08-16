@@ -7,10 +7,10 @@ const UP = {
 }
 
 const WALLS = [
-	{x: WIDTH / 2, y: 0, h: 5, w: WIDTH},
-	{x: 0, y: HEIGHT / 2, h: HEIGHT, w: 5},
-	{x: WIDTH / 2, y: HEIGHT, h: 5, w: WIDTH},
-	{x: WIDTH, y: HEIGHT / 2, h: HEIGHT, w: 5},
+	{x: WIDTH / 2, y: -5, h: 5, w: WIDTH},
+	{x: -5, y: HEIGHT / 2, h: HEIGHT, w: 5},
+	{x: WIDTH / 2, y: HEIGHT + 5, h: 5, w: WIDTH},
+	{x: WIDTH + 5, y: HEIGHT / 2, h: HEIGHT, w: 5},
 ]
 
 const BASE_CD = {
@@ -24,17 +24,18 @@ let player = {
 	speed: 5,
 	jump: 12,
 	sprite: null,
-	cooldowns: {
-		dash: 0,
-		dJump: 0
-	}
 }
 
 let entityMap = {};
 let entityGroup;
 
-function preload() {
+// Images
+let playerImg;
+let hero;
 
+
+function preload() {
+	playerImg = loadImage("images/questKid.png");
 }
 
 function boundarySetUp() {
@@ -49,16 +50,11 @@ function boundarySetUp() {
 		wall.collider = "static";
 		wall.friction = 0;
 	}
-
-	let temp = new Sprite();
-	temp.collider = "s";
-	temp.h = 5;
-	temp.w = 200;
-	temp.y = 380;
-	temp.friction = 0;
 }
 
 function worldSetUp() {
+	allSprites.pixelPerfect = true;
+
 	world.gravity.y = 30;
 
 	entityGroup = new Group();
@@ -66,9 +62,32 @@ function worldSetUp() {
 
 function playerSetUp() {
 	player.sprite = new Sprite();
+	player.sprite.h = 32;
+	player.sprite.w = 32;
+	player.sprite.debug = true;
+
 	player.sprite.rotationLock = true;
 	player.sprite.friction = 0;
+	
+	//
+	//	Initialize Animations
+	//
+	player.sprite.anis.offset.x = 2;
+	player.sprite.anis.offset.y = -4;
+	player.sprite.anis.frameDelay = 8;
 
+	player.sprite.addAnis(playerImg, {
+		run: { row: 0, frames: 8 },
+		jump: { row: 1, frames: 6 },
+		roll: { row: 2, frames: 5, frameDelay: 14 },
+		turn: { row: 3, frames: 7 },
+		stand: { row: 3, frames: 1 }
+	});
+	player.sprite.anis.scale = 4;
+	player.sprite.h = 32 * 3;
+	player.sprite.w = 32;
+
+	player.sprite.changeAni('run');
 	entityMap[player.sprite] = player;
 	entityGroup.push(player.sprite);
 }
@@ -79,24 +98,20 @@ function constructEntity() {
 		power: 10,
 		speed: 5,
 		jump: 12,
-		sprite: null,
-		cooldowns: {
-			dash: 0,
-			dJump: 0
-		}
+		sprite: null
 	}
 }
 
-function spawnSoul() {
-	let soul = constructEntity();
-	soul.sprite = new Sprite();
-	soul.sprite.rotationLock = true;
-	soul.sprite.friction = 0;
-	soul.sprite.layer = 3;
+function spawnEnemy() {
+	let enemy = constructEntity();
+	enemy.sprite = new Sprite();
+	enemy.sprite.rotationLock = true;
+	enemy.sprite.friction = 0;
+	enemy.sprite.layer = 3;
 
-	entityMap[soul.sprite] = soul;
-	entityGroup.add(soul.sprite);
-	return soul;
+	entityMap[enemy.sprite] = enemy;
+	entityGroup.add(enemy.sprite);
+	return enemy;
 }
 
 
@@ -108,14 +123,14 @@ function spawnSoul() {
 
 
 function setup() {
-	let canvas = new Canvas(WIDTH, HEIGHT);
+	let canvas = new Canvas(WIDTH, HEIGHT, 'pixelated');
 	canvas.parent("p5canvas");
 
 	boundarySetUp();
 	worldSetUp();
 
 	playerSetUp();
-	spawnSoul();
+	spawnEnemy();
 }
 
 // Entity Actions
@@ -130,17 +145,19 @@ function updateAllEntities(dt) {
 }
 
 function updateEntity(entity, dt) {
-	Object.keys(entity.cooldowns).forEach((key) => {
-		entity.cooldowns[key] -= dt;
-		if (entity.cooldowns[key] < 0) {
-			entity.cooldowns[key] = 0;
-		}
-	});
-	if (entity != player) soulAI(entity, dt);
+	if (entity != player) enemyAI(entity, dt);
 }
 
-function soulAI(soul, dt) {
-	move(soul, -1);
+function enemyAI(enemy, dt) {
+	move(enemy, -1);
+}
+
+
+//
+//	Entity Actions: possible actions player or enemy can make
+//
+function attack(entity, direction) {
+
 }
 
 function move(entity, value) {
@@ -148,58 +165,18 @@ function move(entity, value) {
 }
 
 function jump(entity) {
-	if (isTouchingFloor(entity)) {
-		entity.sprite.velocity.y = -entity.jump;
-	} else if(!entity.cooldowns.dJump) {
-		entity.sprite.velocity.y = -entity.jump;
-		entity.cooldowns.dJump = BASE_CD.dJump;
-	}
+	entity.sprite.velocity.y = -entity.jump;
 }
 
-function dash(entity) {
-	if (entity.sprite.velocity.x &&
-			!entity.cooldowns.dash) {
-		entity.sprite.velocity.x *= 20;
-		entity.cooldowns.dash = BASE_CD.dash;
-	}
-}
-
-function inputHandle() {
+function handleInput() {
 	if (kb.presses('up')) jump(player);
 	
 	if (kb.pressing('left')) move(player, -player.speed);
 	else if (kb.pressing('right')) move(player, player.speed);
 	else move(player, 0);
 
-	if (kb.presses('j')) dash(player);
 
 	if (kb.presses("g")) console.log(player.sprite);
-}
-
-function isTouchingFloor(entity) {
-	let normals = getContactDirecton(entity);
-	if(!normals) return false;
-	for (let i = 0; i < normals.length; i++) {
-		if(vectorAngleComp(UP, normals[i]) > 0.9) {
-			return true;
-		}
-	}
-	return false;
-}
-
-function getContactDirecton(entity) {
-	let contacts = entity.sprite.body.m_contactList;
-	if (!contacts) return null;
-	let normals = [];
-	do {
-		normals.push(contacts.contact.v_normal);
-		contacts = contacts.next;
-	} while (contacts);
-	return normals;
-}
-
-function vectorAngleComp(v1, v2) {
-	return v1.x * v2.x + v1.y * v2.y;
 }
 
 
@@ -209,5 +186,7 @@ function draw() {
 
 	updateAllEntities(1);
 
-	inputHandle();
+	handleInput();
+
+	animation(runAnimation, 200, 200);
 }
