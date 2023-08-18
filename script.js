@@ -221,13 +221,14 @@ function enemyAI(enemy, dt) {
 function attack(entity) {
 	updateHitbox(entity);
 	entity.sprite.changeAni(["attack", 'stand']);
-
-	entity.attackHitbox.overlaps(entityGroup, handleAttack);
-}
-
-function handleAttack(source, receiver) {
-	console.log(source);
-	console.log(receiver);
+	
+	for(let i = 0; i < entityGroup.length; i++) {
+		let e = entityGroup[i];
+		
+		if (entity.sprite.overlap(e)) {
+			console.log()
+		}
+	}
 }
 
 function move(entity, value) {
