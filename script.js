@@ -23,7 +23,8 @@ const ANIMATIONS = {
 	roll: { row: 2, frames: 5, frameDelay: 14 },
 	turn: { row: 3, frames: 7 },
 	stand: { row: 3, frames: 1 },
-	attack: { row: 10, frames: 10}
+	attack: { row: 10, frames: 10},
+	die: {row: 14, frames: 5}
 }
 
 let player = constructEntity();
@@ -224,11 +225,15 @@ function attack(entity) {
 	
 	for(let i = 0; i < entityGroup.length; i++) {
 		let e = entityGroup[i];
-		
-		if (entity.sprite.overlap(e)) {
-			console.log()
+		if (entity.attackHitbox.overlapping(e)) {
+			damage(entityMap[e], entity.power);
 		}
 	}
+}
+
+function damage(entity, amount) {
+	entity.health -= amount;
+	console.log(entity.health);
 }
 
 function move(entity, value) {
@@ -251,6 +256,10 @@ function move(entity, value) {
 function jump(entity) {
 	entity.sprite.changeAni(['jump', 'stand']);
 	entity.sprite.velocity.y = -entity.jump;
+}
+
+function die(entity) {
+	entity.sprite.changeAni("die");
 }
 
 function handleInput() {
