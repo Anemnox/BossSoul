@@ -1,7 +1,7 @@
-const WIDTH = 320;
-const HEIGHT = 240;
+const WIDTH = 480;
+const HEIGHT = 360;
 
-const DEBUG_MODE = true;
+const DEBUG_MODE = false;
 
 const UP = {
 	x: 0,
@@ -31,7 +31,8 @@ const ANIMATIONS = {
 	roll: { row: 2, frames: 5, frameDelay: 6 },
 	turn: { row: 3, frames: 7 },
 	stand: { row: 3, frames: 1 },
-	attack: { row: 10, frames: 10 },
+	attack: { row: 11, frames: 10 },
+	damaged: { row: 13, frames: 4},
 	die: { row: 14, frames: 7 }
 }
 
@@ -39,11 +40,16 @@ const ACTIONS = {
 	NONE: "NONE",
 	ATTACK: "ATTACK",
 	ROLL: "ROLL",
+	DAMAGED: "DAMAGED",
 	DIE: "DIE"
 }
 
+const ACTIONS_THAT_MOVE = [
+	ACTIONS.DAMAGED, ACTIONS.ROLL, ACTIONS.DIE
+]
+
 const ACTION_DATA = {
-	ATTACK: {actionTime: 20, duration: 10, cancelTime: 10, cancelable: true},
+	ATTACK: {actionTime: 5, duration: 8, cancelTime: 10, cancelable: true},
 	ROLL: {cancelable: false}
 }
 
@@ -103,6 +109,7 @@ function constructEntity() {
 		speed: 3,
 		jump: 10,
 		direction: 1,
+		resetMotion: false,
 		action: ACTIONS.NONE,
 		actionTime: 0,
 		sprite: null,
@@ -154,7 +161,7 @@ function constructEntity() {
 
 function setupAttackHitbox(entity) {
 	entity.attackHitbox = new Sprite();
-	entity.attackHitbox.w = 20;
+	entity.attackHitbox.w = 15;
 	entity.attackHitbox.h = 10;
 	entity.attackHitbox.mass = 0;
 	entity.attackHitbox.visible = DEBUG_MODE;
@@ -169,6 +176,7 @@ function updateHitbox(entity) {
 	entity.joint.remove();
 	entity.attackHitbox.x = (entity.sprite.x + (25 * entity.direction));
 	entity.joint = new GlueJoint(entity.sprite, entity.attackHitbox);
+	entity.joint.visible = DEBUG_MODE;
 }
 
 function setup() {
@@ -196,11 +204,16 @@ function updateAllEntities(dt) {
 	for (let i = 0; i < entities.length; i++) {
 		let e = entities[i];
 		updateEntity(e, dt);
+		drawEntityHealth(e);
 	}
 }
 
 function updateEntity(entity, dt) {
 	if (entity != player) soulAI(entity, dt);
+	if (entity.action == ACTIONS.DIE) {
+		return;
+	}
+	resetMovement(entity);
 
 	entity.actionTime += dt;
 	Object.keys(entity.cooldowns).forEach((key) => {
@@ -211,6 +224,10 @@ function updateEntity(entity, dt) {
 	});
 	handleEntityAction(entity, dt);
 	handleEntityAnimation(entity, dt);
+
+	if (entity.health <= 0) {
+		die(entity);
+	}
 }
 
 function handleEntityAnimation(entity, dt) {
@@ -233,13 +250,29 @@ function handleEntityAction(entity, dt) {
 				entity.sprite.velocity.x
 			) * entity.speed * 1.5;
 	} else if (entity.action == ACTIONS.ATTACK) {
-		let actionDat = ACTION_DATA[ACTIONS.ATTACK];
-
+		if (withinActionTimeWindow(entity)) {
+			handleAttack(entity);
+		}
 	}
 }
 
+function handleAttack(entity) {
+	let attacked = false;
+	for(let i = 0; i < entityGroup.length; i++) {
+		let e = entityGroup[i];
+		if (entity.attackHitbox.overlapping(e)) {
+			damage(entityMap[e], entity.power, entity.direction);
+			attacked = true;
+		}
+	}
+	if (attacked) {
+		entity.actionTime += 20;
+	}
+}
+
+
 function soulAI(soul, dt) {
-	move(soul, -1);
+	//move(soul, -1);
 }
 
 
@@ -254,19 +287,11 @@ function attack(entity) {
 		entity.actionTime = 0;
 
 		entity.sprite.changeAni("attack").then(() => resetAction(entity));
-
-
-		for(let i = 0; i < entityGroup.length; i++) {
-			let e = entityGroup[i];
-			if (entity.attackHitbox.overlapping(e)) {
-				damage(entityMap[e], entity.power);
-			}
-		}
 	}
 }
 
 function roll(entity) {
-	if (entity.sprite.velocity.x && canDoAction(entity)) {
+	if (entity.sprite.velocity.x && canDoAction(entity, ACTIONS.ROLL)) {
 		entity.action = ACTIONS.ROLL;
 		entity.cooldowns.ROLL = BASE_CD.ROLL;
 		entity.actionTime = 0;
@@ -279,6 +304,16 @@ function resetAction(entity) {
 	entity.action = ACTIONS.NONE;
 }
 
+function resetMovement(entity) {
+	if (entity.resetMotion) {
+		if(!ACTIONS_THAT_MOVE.includes(entity.action)) {
+			move(entity, 0);
+		}
+	} else {
+		entity.resetMotion = true;
+	}
+}
+
 
 function move(entity, value) {
 	if(entity.action == ACTIONS.NONE) {
@@ -288,14 +323,15 @@ function move(entity, value) {
 		}
 	}
 	entity.sprite.velocity.x = value * entity.speed;
+	entity.resetMotion = false;
 }
 
 function jump(entity) {
 	if (isTouchingFloor(entity)) {
 		entity.sprite.velocity.y = entity.jump * UP.y;
-	} else if (!entity.cooldowns.dJump) {
+	} else if (!entity.cooldowns.D_JUMP) {
 		entity.sprite.velocity.y = entity.jump * UP.y;
-		entity.cooldowns.dJump = BASE_CD.dJump;
+		entity.cooldowns.D_JUMP = BASE_CD.D_JUMP;
 	}
 }
 
@@ -312,16 +348,21 @@ function revive(entity) {
 }
 
 
-function damage(entity, amount) {
+function damage(entity, amount, direction) {
+	entity.action = ACTIONS.DAMAGED;
 	entity.health -= amount;
+
+	entity.sprite.velocity.x = direction * 3;
+	entity.sprite.velocity.y = 3 * UP.y;
+	entity.sprite.changeAni("damaged").then(() => resetAction(entity));
 }
 
 
 function canDoAction(entity, action) {
+	if (entity.cooldowns[action] > 0) return false;
 	if (entity.action == ACTIONS.NONE) return true;
-	if (entity.cooldowns[entity.action] > 0) return false;
-	let actionDat = ACTION_DATA[entity.action];
 	/*
+	let actionDat = ACTION_DATA[action];
 	Something about the animations are not working
 	actions are being cancelled but does not perform
 	the action.
@@ -329,11 +370,20 @@ function canDoAction(entity, action) {
 		entity.actionTime <= actionDat.cancelTime) {
 		entity.action = ACTIONS.NONE;
 		return true;
-	}*/
+	}//*/
 
 	return false;
 }
 
+function withinActionTimeWindow(entity) {
+	let actionDat = ACTION_DATA[entity.action];
+	if(!actionDat || !actionDat.duration) {
+		//console.error("bad action!");
+		return false;
+	}
+	return (actionDat.actionTime <= entity.actionTime && 
+		actionDat.actionTime + actionDat.duration > entity.actionTime);
+}
 
 
 function inputHandle() {
@@ -341,7 +391,6 @@ function inputHandle() {
 
 	if (kb.pressing('left')) move(player, -1);
 	else if (kb.pressing('right')) move(player, 1);
-	else move(player, 0);
 
 	if (kb.presses('j')) roll(player);
 	if (kb.presses('k')) attack(player);
@@ -356,8 +405,40 @@ function draw() {
 	else if (kb.presses(';')) revive(player);
 
 	updateAllEntities(1);
+
+	renderPlayerCooldowns();
 }
 
+function drawEntityHealth(e) {
+	fill(75, 20, 20);
+	rect(
+		(e.sprite.x - 10),
+		(e.sprite.y - 30),
+		20, 5
+	);
+	noStroke();
+	fill("green");
+	rect(
+		(e.sprite.x - 10),
+		(e.sprite.y - 30),
+		e.health > 0 ? e.health / 5 : 0,
+		5
+	);
+	stroke(0,0,0);
+}
+
+function renderPlayerCooldowns() {
+	let rollCD = document.getElementById("roll-cd");
+	let dJumpCD = document.getElementById("d-jump-cd");
+
+	rollCD.style.width = ((player.cooldowns.ROLL / BASE_CD.ROLL) * 100) + "%";
+	dJumpCD.style.width = ((player.cooldowns.D_JUMP / BASE_CD.D_JUMP) * 100) + "%";
+}
+
+
+//
+// 	Utility Functions
+//
 function isTouchingFloor(entity) {
 	let normals = getContactDirecton(entity);
 	if (!normals) return false;
@@ -389,6 +470,7 @@ function normalizeScalar(number) {
 	return Math.round(number / Math.abs(number));
 }
 
+// Button Funcs;
 function b_jump() {
 	jump(player);
 }

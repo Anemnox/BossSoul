@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>Boss Soul</title>
+		<title>Combat Demo</title>
 		<link type="text/css" rel="stylesheet" href="style.css" />
 
 		<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
@@ -13,6 +13,24 @@
 	<body>
 		<div id="p5canvas">
 
+		</div>
+		<div class="cooldown-container">
+			<div>Roll: <div class="cd-bg"><div id="roll-cd"></div></div></div>
+			<div>Double Jump: <div class="cd-bg"><div id="d-jump-cd"></div></div></div>
+		</div>
+		<div class="directions">
+			<h3>Info:</h3>
+			<p>
+				A short demo of a character combat. A few actions have cooldowns.
+				Enemy AI coming soon!
+			</p>
+			<h4>Controls:</h4>
+			<ul>
+				<li>w: Jump</li>
+				<li>a, d: Move left or right</li>
+				<li>j: Roll</li>
+				<li>k: Attack</li>
+			</ul>
 		</div>
 		<div class="button-container">
 			<button onmousedown="b_jump()">Jump</button>

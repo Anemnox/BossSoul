@@ -1,14 +1,56 @@
+html, body {
+    overflow: unset !important;
+    height: unset;
+}
+
 #p5canvas {
-    margin: 10vh auto;
-    width: 60%;
+    position: relative;
+    margin-top: 5vh;
+    width: 100%;
+    max-height: 80vh;
+    text-align: center;
 }
 
 #p5canvas canvas {
-    width: 100% !important;
-    height: 100% !important;
+    position: relative;
+    width: auto !important;
+    height: 80vh !important;
+    max-height: 80vh !important;
+    max-width: 100%;
+    overflow: unset;
+}
+
+.cooldown-container {
+    width: 60%;
+    margin: auto;
+    text-align: center;
+}
+
+.cooldown-container > div {
+    display: inline-block;
+}
+
+.cd-bg {
+    height: 10px;
+    width: 100px;
+    background: green;
+}
+
+.cd-bg > div{
+    height: 100%;
+    width: 10px;
+    float: right;
+    background: red;
+}
+
+.directions {
+    width: 60%;
+    margin: auto;
+    text-align: left;
 }
 
 .button-container {
+    display: none;
     width: 50%;
     margin: auto;
 }
