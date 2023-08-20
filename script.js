@@ -20,13 +20,10 @@ const FLOOR = {
 }
 
 const BASE_CD = {
-	roll: 100,
-	dJump: 100,
+	ROLL: 100,
+	D_JUMP: 100,
 }
 
-//
-//	Character Animation Data
-//
 const ANIMATIONS = {
 	run: { row: 0, frames: 8 },
 	jump: { row: 1, frames: 6, frameDelay: 8 },
@@ -35,21 +32,20 @@ const ANIMATIONS = {
 	turn: { row: 3, frames: 7 },
 	stand: { row: 3, frames: 1 },
 	attack: { row: 10, frames: 10 },
-	die: { row: 14, frames: 5 }
+	die: { row: 14, frames: 7 }
 }
 
 const ACTIONS = {
 	NONE: "NONE",
-	IDLE: "IDLE",
 	ATTACK: "ATTACK",
-	ROLL: "ROLL"
+	ROLL: "ROLL",
+	DIE: "DIE"
 }
 
 const ACTION_DATA = {
 	ATTACK: {cancelTime: 10, cancelable: true},
 	ROLL: {cancelable: false}
 }
-
 
 let player;
 
@@ -58,7 +54,6 @@ let entityGroup;
 
 // Images
 let playerImg;
-let hero;
 
 
 function preload() {
@@ -98,6 +93,7 @@ function worldSetUp() {
 
 function playerSetUp() {
 	player = constructEntity();
+	player.sprite.layer = 5;				// enemies are drawn behind player
 }
 
 function constructEntity() {
@@ -112,7 +108,7 @@ function constructEntity() {
 		sprite: null,
 		attackHitbox: null,
 		cooldowns: {
-			roll: 0,
+			ROLL: 0,
 			dJump: 0
 		}
 	}
@@ -121,7 +117,6 @@ function constructEntity() {
 	entity.sprite.w = 32;
 	entity.sprite.rotationLock = true;
 	entity.sprite.friction = 0;
-	entity.sprite.layer = 1;				// enemies are drawn behind player
 
 	//
 	//	Initialize Animations
@@ -157,12 +152,6 @@ function constructEntity() {
 	return entity;
 }
 
-function spawnEnemy() {
-	let enemy = constructEntity();
-	
-	return enemy;
-}
-
 function setupAttackHitbox(entity) {
 	entity.attackHitbox = new Sprite();
 	entity.attackHitbox.w = 20;
@@ -192,6 +181,14 @@ function setup() {
 	playerSetUp();
 	spawnEnemy();
 }
+
+function spawnEnemy() {
+	let enemy = constructEntity();
+	enemy.sprite.layer = 1;				// enemies are drawn behind player
+
+	return enemy;
+}
+
 
 // Entity Updates
 function updateAllEntities(dt) {
@@ -266,10 +263,9 @@ function attack(entity) {
 }
 
 function roll(entity) {
-	if (entity.sprite.velocity.x &&
-		!entity.cooldowns.roll) {
+	if (entity.sprite.velocity.x && canDoAction(entity)) {
 		entity.action = ACTIONS.ROLL;
-		entity.cooldowns.roll = BASE_CD.roll;
+		entity.cooldowns.ROLL = BASE_CD.ROLL;
 		entity.actionTime = 0;
 
 		entity.sprite.changeAni("roll").then(() => resetAction(entity));
@@ -301,7 +297,15 @@ function jump(entity) {
 }
 
 function die(entity) {
+	entity.action = ACTIONS.DIE;
 	entity.sprite.changeAni("die");
+	entity.sprite.ani.noLoop();
+	entity.sprite.ani.play(0);
+}
+
+function revive(entity) {
+	entity.action = ACTIONS.NONE;
+	entity.sprite.ani.loop();
 }
 
 
@@ -312,6 +316,17 @@ function damage(entity, amount) {
 
 function canDoAction(entity, action) {
 	if (entity.action == ACTIONS.NONE) return true;
+	if (entity.cooldowns[entity.action] > 0) return false;
+	let actionDat = ACTION_DATA[entity.action];
+	/*
+	Something about the animations are not working
+	actions are being cancelled but does not perform
+	the action.
+	if (actionDat.cancelable && 
+		entity.actionTime <= actionDat.cancelTime) {
+		entity.action = ACTIONS.NONE;
+		return true;
+	}*/
 
 	return false;
 }
@@ -327,13 +342,15 @@ function inputHandle() {
 
 	if (kb.presses('j')) roll(player);
 	if (kb.presses('k')) attack(player);
+	if (kb.presses('p')) die(player);
 
 	if (kb.presses("g")) console.log(player.sprite);
 }
 
 function draw() {
 	background("beige");
-	inputHandle();
+	if (player.action != ACTIONS.DIE) inputHandle();
+	else if (kb.presses(';')) revive(player);
 
 	updateAllEntities(1);
 }
