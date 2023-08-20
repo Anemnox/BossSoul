@@ -7,3 +7,13 @@
     width: 100% !important;
     height: 100% !important;
 }
+
+.button-container {
+    width: 50%;
+    margin: auto;
+}
+
+.button-container button {
+	font-size: 3em;
+}
+

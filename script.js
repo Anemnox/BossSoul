@@ -43,7 +43,7 @@ const ACTIONS = {
 }
 
 const ACTION_DATA = {
-	ATTACK: {cancelTime: 10, cancelable: true},
+	ATTACK: {actionTime: 20, duration: 10, cancelTime: 10, cancelable: true},
 	ROLL: {cancelable: false}
 }
 
@@ -109,7 +109,7 @@ function constructEntity() {
 		attackHitbox: null,
 		cooldowns: {
 			ROLL: 0,
-			dJump: 0
+			D_JUMP: 0
 		}
 	}
 	entity.sprite = new Sprite();
@@ -232,6 +232,9 @@ function handleEntityAction(entity, dt) {
 		entity.sprite.velocity.x = normalizeScalar(
 				entity.sprite.velocity.x
 			) * entity.speed * 1.5;
+	} else if (entity.action == ACTIONS.ATTACK) {
+		let actionDat = ACTION_DATA[ACTIONS.ATTACK];
+
 	}
 }
 
@@ -384,4 +387,24 @@ function vectorAngleComp(v1, v2) {
 function normalizeScalar(number) {
 	if (!number) return 0;
 	return Math.round(number / Math.abs(number));
+}
+
+function b_jump() {
+	jump(player);
+}
+
+function b_move_left() {
+	move(player, -1);
+}
+
+function b_move_right() {
+	move(player, 1);
+}
+
+function b_attack() {
+	attack(player);
+}
+
+function b_dash() {
+	dash(player);
 }
