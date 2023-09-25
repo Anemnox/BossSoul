@@ -1,5 +1,5 @@
-# BossSoul
-A short game made with p5play and vanilla JavaScript.
+# Side Scroller Test
+A short demo made with p5play and vanilla JavaScript.
 
 (Currently the assets are taken from P5Play's demo)
 
